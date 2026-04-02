@@ -3,159 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProGen | Gerador Profissional de Dados</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>ProGen | Gerador Profissional</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
 </head>
-<body>
-    <div class="container">
+<body data-bs-theme="light">
+    <div class="container-fluid">
         <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <h1 class="logo">
-                    <span class="logo-icon">🔧</span>
-                    ProGen
-                </h1>
-                <p class="subtitle">Gerador profissional de dados para devs & gamers</p>
+        <header class="header py-5 text-center mb-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <h1 class="logo mb-3">
+                        <i class="bi bi-tools me-3"></i>
+                        ProGen
+                    </h1>
+                    <p class="lead text-muted fs-5">Gerador profissional de dados para desenvolvedores e gamers</p>
+                </div>
             </div>
-            <button class="theme-toggle" aria-label="Alternar tema" title="Dark/Light Mode">
-                <span class="sun-icon">☀️</span>
-                <span class="moon-icon">🌙</span>
+            <button class="theme-toggle btn btn-outline-secondary rounded-circle position-fixed" 
+                    style="top: 1.5rem; right: 1.5rem; width: 50px; height: 50px; z-index: 1060;"
+                    title="Alternar tema">
+                <i class="bi bi-brightness-high-fill theme-sun"></i>
+                <i class="bi bi-moon-fill theme-moon"></i>
             </button>
         </header>
 
         <!-- Tabs Navigation -->
-        <nav class="tabs" role="tablist">
-            <button class="tab-btn active" data-tab="cpf" role="tab" aria-selected="true" tabindex="0">
-                <span class="tab-icon">🆔</span> CPF
-            </button>
-            <button class="tab-btn" data-tab="pass" role="tab" aria-selected="false" tabindex="-1">
-                <span class="tab-icon">🔒</span> Senhas
-            </button>
-            <button class="tab-btn" data-tab="names" role="tab" aria-selected="false" tabindex="-1">
-                <span class="tab-icon">👤</span> Nomes
-            </button>
-            <button class="tab-btn" data-tab="users" role="tab" aria-selected="false" tabindex="-1">
-                <span class="tab-icon">🎮</span> Usernames
-            </button>
+        <nav>
+            <div class="card shadow-lg border-0 rounded-4 mb-5 overflow-hidden">
+                <ul class="nav nav-pills nav-fill gap-2 p-3 bg-body-secondary" id="tabs-nav" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active tab-btn rounded-3 px-4 py-3" 
+                                id="cpf-tab" data-bs-toggle="pill" data-bs-target="#cpf" 
+                                type="button" role="tab" aria-selected="true">
+                            <i class="bi bi-person-badge me-2"></i>CPF
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link tab-btn rounded-3 px-4 py-3" 
+                                id="pass-tab" data-bs-toggle="pill" data-bs-target="#pass" 
+                                type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-lock-fill me-2"></i>Senhas
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link tab-btn rounded-3 px-4 py-3" 
+                                id="names-tab" data-bs-toggle="pill" data-bs-target="#names" 
+                                type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-person-fill me-2"></i>Nomes
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link tab-btn rounded-3 px-4 py-3" 
+                                id="users-tab" data-bs-toggle="pill" data-bs-target="#users" 
+                                type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-controller me-2"></i>Usernames
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </nav>
 
         <!-- Main Content -->
-        <main class="content" role="tabpanel">
-            <!-- CPF Tab -->
-            <section id="cpf" class="tab-content active" role="tabpanel" aria-labelledby="cpf-tab">
-                <div class="section-header">
-                    <h2 class="section-title">Gerador de CPF</h2>
-                    <div class="stats">
-                        <span class="stat-item">100% Válido</span>
-                        <span class="stat-item">Formato BR</span>
-                    </div>
-                </div>
-                <div class="display-area">
-                    <input type="text" id="cpf-output" class="output-field" readonly placeholder="000.000.000-00" aria-label="CPF gerado">
-                    <button class="copy-btn" data-copy="cpf-output" aria-label="Copiar CPF">
-                        📋
-                    </button>
-                </div>
-                <button class="main-btn" data-action="cpf">
-                    <span class="btn-text">Gerar CPF</span>
-                    <span class="btn-loader" aria-hidden="true"></span>
-                </button>
-            </section>
-
-            <!-- Password Tab -->
-            <section id="pass" class="tab-content" role="tabpanel" aria-labelledby="pass-tab" hidden>
-                <div class="section-header">
-                    <h2 class="section-title">Gerador de Senhas Fortes</h2>
-                    <div class="stats">
-                        <span class="stat-item">NIST Compliant</span>
-                        <span class="stat-item">Entropia Alta</span>
-                    </div>
-                </div>
-                <div class="display-area">
-                    <input type="text" id="pass-output" class="output-field" readonly placeholder="Ex: K7#mP9$xL2@qR5!" aria-label="Senha gerada">
-                    <button class="copy-btn" data-copy="pass-output" aria-label="Copiar senha">
-                        📋
-                    </button>
-                </div>
-                <div class="controls-grid">
-                    <div class="control-group">
-                        <label for="pass-length">Tamanho</label>
-                        <div class="range-wrapper">
-                            <span class="range-value" id="length-val">16</span>
-                            <input type="range" id="pass-length" min="8" max="64" value="16" class="range-input">
+        <main>
+            <div class="card shadow-xl border-0 rounded-4 overflow-hidden">
+                <div class="card-body p-5">
+                    <!-- CPF Tab -->
+                    <div class="tab-pane fade show active" id="cpf" role="tabpanel" aria-labelledby="cpf-tab">
+                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+                            <div>
+                                <h2 class="h3 mb-2">
+                                    <i class="bi bi-person-badge-fill text-primary me-2"></i>
+                                    Gerador de CPF
+                                </h2>
+                                <div class="d-flex gap-3">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>100% Válido
+                                    </span>
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-flag-fill me-1"></i>Formato BR
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="control-group">
-                        <label>Caracteres</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="use-numbers" checked> Números
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="use-symbols" checked> Símbolos
-                            </label>
+                        <div class="display-area mb-4 position-relative">
+                            <input type="text" id="cpf-output" class="form-control form-control-lg rounded-4 px-4 py-3 fs-5" 
+                                   readonly placeholder="000.000.000-00">
+                            <button class="copy-btn btn btn-outline-secondary rounded-circle position-absolute top-50 end-0 translate-middle-y me-3 shadow-sm" 
+                                    data-copy="cpf-output" title="Copiar">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
                         </div>
+                        <button class="btn btn-primary btn-lg w-100 rounded-4 py-3 fw-semibold generate-btn" data-action="cpf">
+                            <span class="btn-text d-flex align-items-center justify-content-center">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Gerar CPF
+                            </span>
+                            <div class="btn-loader spinner-border spinner-border-sm d-none" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </button>
                     </div>
-                </div>
-                <button class="main-btn" data-action="pass">
-                    <span class="btn-text">Gerar Senha</span>
-                    <span class="btn-loader" aria-hidden="true"></span>
-                </button>
-            </section>
 
-            <!-- Names Tab -->
-            <section id="names" class="tab-content" role="tabpanel" aria-labelledby="names-tab" hidden>
-                <div class="section-header">
-                    <h2 class="section-title">Gerador de Nomes</h2>
-                    <div class="stats">
-                        <span class="stat-item">+10k Nomes</span>
-                        <span class="stat-item">Realistas</span>
+                    <!-- Password Tab -->
+                    <div class="tab-pane fade" id="pass" role="tabpanel" aria-labelledby="pass-tab">
+                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+                            <div>
+                                <h2 class="h3 mb-2">
+                                    <i class="bi bi-shield-lock-fill text-success me-2"></i>
+                                    Gerador de Senhas Fortes
+                                </h2>
+                                <div class="d-flex gap-3">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>NIST Compliant
+                                    </span>
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-graph-up me-1"></i>Entropia Alta
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="display-area mb-4 position-relative">
+                            <input type="text" id="pass-output" class="form-control form-control-lg rounded-4 px-4 py-3 fs-5" 
+                                   readonly placeholder="Ex: K7#mP9$xL2@qR5!">
+                            <button class="copy-btn btn btn-outline-secondary rounded-circle position-absolute top-50 end-0 translate-middle-y me-3 shadow-sm" 
+                                    data-copy="pass-output" title="Copiar">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label for="pass-length" class="form-label fw-medium">
+                                    <i class="bi bi-rulers me-2 text-muted"></i>Tamanho
+                                </label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="range-value fw-semibold text-primary fs-5" id="length-val">16</span>
+                                    <input type="range" id="pass-length" class="form-range w-100" min="8" max="64" value="16">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium mb-3">
+                                    <i class="bi bi-gear-fill me-2 text-muted"></i>Caracteres
+                                </label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="use-numbers" checked>
+                                        <label class="form-check-label" for="use-numbers">
+                                            <i class="bi bi-hash me-2"></i>Números (0-9)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="use-symbols" checked>
+                                        <label class="form-check-label" for="use-symbols">
+                                            <i class="bi bi-slash-circle me-2"></i>Símbolos (!@#$)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-lg w-100 rounded-4 py-3 fw-semibold generate-btn" data-action="pass">
+                            <span class="btn-text d-flex align-items-center justify-content-center">
+                                <i class="bi bi-key me-2"></i>Gerar Senha Forte
+                            </span>
+                            <div class="btn-loader spinner-border spinner-border-sm d-none" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </button>
                     </div>
-                </div>
-                <div class="display-area">
-                    <input type="text" id="name-output" class="output-field" readonly placeholder="João Silva Santos" aria-label="Nome gerado">
-                    <button class="copy-btn" data-copy="name-output" aria-label="Copiar nome">
-                        📋
-                    </button>
-                </div>
-                <button class="main-btn" data-action="names">
-                    <span class="btn-text">Gerar Nome</span>
-                    <span class="btn-loader" aria-hidden="true"></span>
-                </button>
-            </section>
 
-            <!-- Usernames Tab -->
-            <section id="users" class="tab-content" role="tabpanel" aria-labelledby="users-tab" hidden>
-                <div class="section-header">
-                    <h2 class="section-title">Usernames Criativos</h2>
-                    <div class="stats">
-                        <span class="stat-item">Gaming Ready</span>
-                        <span class="stat-item">Únicos</span>
+                    <!-- Names Tab -->
+                    <div class="tab-pane fade" id="names" role="tabpanel" aria-labelledby="names-tab">
+                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+                            <div>
+                                <h2 class="h3 mb-2">
+                                    <i class="bi bi-people-fill text-info me-2"></i>
+                                    Gerador de Nomes
+                                </h2>
+                                <div class="d-flex gap-3">
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-database-fill me-1"></i>+10k Nomes
+                                    </span>
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Realistas
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="display-area mb-4 position-relative">
+                            <input type="text" id="name-output" class="form-control form-control-lg rounded-4 px-4 py-3 fs-5" 
+                                   readonly placeholder="João Silva Santos">
+                            <button class="copy-btn btn btn-outline-secondary rounded-circle position-absolute top-50 end-0 translate-middle-y me-3 shadow-sm" 
+                                    data-copy="name-output" title="Copiar">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-info btn-lg w-100 rounded-4 py-3 fw-semibold generate-btn" data-action="names">
+                            <span class="btn-text d-flex align-items-center justify-content-center">
+                                <i class="bi bi-person-plus me-2"></i>Gerar Nome
+                            </span>
+                            <div class="btn-loader spinner-border spinner-border-sm d-none" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Usernames Tab -->
+                    <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
+                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+                            <div>
+                                <h2 class="h3 mb-2">
+                                    <i class="bi bi-controller text-warning me-2"></i>
+                                    Usernames Criativos
+                                </h2>
+                                <div class="d-flex gap-3">
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-trophy-fill me-1"></i>Gaming Ready
+                                    </span>
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Únicos
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="display-area mb-4 position-relative">
+                            <input type="text" id="user-output" class="form-control form-control-lg rounded-4 px-4 py-3 fs-5" 
+                                   readonly placeholder="ShadowNinja_404">
+                            <button class="copy-btn btn btn-outline-secondary rounded-circle position-absolute top-50 end-0 translate-middle-y me-3 shadow-sm" 
+                                    data-copy="user-output" title="Copiar">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-warning btn-lg w-100 rounded-4 py-3 fw-semibold generate-btn text-white" data-action="users">
+                            <span class="btn-text d-flex align-items-center justify-content-center">
+                                <i class="bi bi-person-gear me-2"></i>Gerar Username
+                            </span>
+                            <div class="btn-loader spinner-border spinner-border-sm d-none" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
-                <div class="display-area">
-                    <input type="text" id="user-output" class="output-field" readonly placeholder="ShadowNinja_404" aria-label="Username gerado">
-                    <button class="copy-btn" data-copy="user-output" aria-label="Copiar username">
-                        📋
-                    </button>
-                </div>
-                <button class="main-btn" data-action="users">
-                    <span class="btn-text">Gerar Username</span>
-                    <span class="btn-loader" aria-hidden="true"></span>
-                </button>
-            </section>
+            </div>
         </main>
 
         <!-- Footer -->
-        <footer class="footer">
-            <p>&copy; 2026 ProGen Toolkit <span class="dot">•</span> Feito pela lS STUDIO❤️ para devs</p>
+        <footer class="mt-5 pt-5 text-center text-muted">
+            <p class="mb-0">
+                <i class="bi bi-heart-fill text-danger me-1"></i>
+                © 2026 ProGen Toolkit • Feito para desenvolvedores
+            </p>
         </footer>
     </div>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
     <script src="script.js"></script>
 </body>
 </html>
