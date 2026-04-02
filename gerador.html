@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProGen | Gerador Profissional de Dados</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="Gerador.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <span class="logo-icon">🔧</span>
+                    ProGen
+                </h1>
+                <p class="subtitle">Gerador profissional de dados para devs & gamers</p>
+            </div>
+            <button class="theme-toggle" aria-label="Alternar tema" title="Dark/Light Mode">
+                <span class="sun-icon">☀️</span>
+                <span class="moon-icon">🌙</span>
+            </button>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <nav class="tabs" role="tablist">
+            <button class="tab-btn active" data-tab="cpf" role="tab" aria-selected="true" tabindex="0">
+                <span class="tab-icon">🆔</span> CPF
+            </button>
+            <button class="tab-btn" data-tab="pass" role="tab" aria-selected="false" tabindex="-1">
+                <span class="tab-icon">🔒</span> Senhas
+            </button>
+            <button class="tab-btn" data-tab="names" role="tab" aria-selected="false" tabindex="-1">
+                <span class="tab-icon">👤</span> Nomes
+            </button>
+            <button class="tab-btn" data-tab="users" role="tab" aria-selected="false" tabindex="-1">
+                <span class="tab-icon">🎮</span> Usernames
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content" role="tabpanel">
+            <!-- CPF Tab -->
+            <section id="cpf" class="tab-content active" role="tabpanel" aria-labelledby="cpf-tab">
+                <div class="section-header">
+                    <h2 class="section-title">Gerador de CPF</h2>
+                    <div class="stats">
+                        <span class="stat-item">100% Válido</span>
+                        <span class="stat-item">Formato BR</span>
+                    </div>
+                </div>
+                <div class="display-area">
+                    <input type="text" id="cpf-output" class="output-field" readonly placeholder="000.000.000-00" aria-label="CPF gerado">
+                    <button class="copy-btn" data-copy="cpf-output" aria-label="Copiar CPF">
+                        📋
+                    </button>
+                </div>
+                <button class="main-btn" data-action="cpf">
+                    <span class="btn-text">Gerar CPF</span>
+                    <span class="btn-loader" aria-hidden="true"></span>
+                </button>
+            </section>
+
+            <!-- Password Tab -->
+            <section id="pass" class="tab-content" role="tabpanel" aria-labelledby="pass-tab" hidden>
+                <div class="section-header">
+                    <h2 class="section-title">Gerador de Senhas Fortes</h2>
+                    <div class="stats">
+                        <span class="stat-item">NIST Compliant</span>
+                        <span class="stat-item">Entropia Alta</span>
+                    </div>
+                </div>
+                <div class="display-area">
+                    <input type="text" id="pass-output" class="output-field" readonly placeholder="Ex: K7#mP9$xL2@qR5!" aria-label="Senha gerada">
+                    <button class="copy-btn" data-copy="pass-output" aria-label="Copiar senha">
+                        📋
+                    </button>
+                </div>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="pass-length">Tamanho</label>
+                        <div class="range-wrapper">
+                            <span class="range-value" id="length-val">16</span>
+                            <input type="range" id="pass-length" min="8" max="64" value="16" class="range-input">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Caracteres</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="use-numbers" checked> Números
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="use-symbols" checked> Símbolos
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button class="main-btn" data-action="pass">
+                    <span class="btn-text">Gerar Senha</span>
+                    <span class="btn-loader" aria-hidden="true"></span>
+                </button>
+            </section>
+
+            <!-- Names Tab -->
+            <section id="names" class="tab-content" role="tabpanel" aria-labelledby="names-tab" hidden>
+                <div class="section-header">
+                    <h2 class="section-title">Gerador de Nomes</h2>
+                    <div class="stats">
+                        <span class="stat-item">+10k Nomes</span>
+                        <span class="stat-item">Realistas</span>
+                    </div>
+                </div>
+                <div class="display-area">
+                    <input type="text" id="name-output" class="output-field" readonly placeholder="João Silva Santos" aria-label="Nome gerado">
+                    <button class="copy-btn" data-copy="name-output" aria-label="Copiar nome">
+                        📋
+                    </button>
+                </div>
+                <button class="main-btn" data-action="names">
+                    <span class="btn-text">Gerar Nome</span>
+                    <span class="btn-loader" aria-hidden="true"></span>
+                </button>
+            </section>
+
+            <!-- Usernames Tab -->
+            <section id="users" class="tab-content" role="tabpanel" aria-labelledby="users-tab" hidden>
+                <div class="section-header">
+                    <h2 class="section-title">Usernames Criativos</h2>
+                    <div class="stats">
+                        <span class="stat-item">Gaming Ready</span>
+                        <span class="stat-item">Únicos</span>
+                    </div>
+                </div>
+                <div class="display-area">
+                    <input type="text" id="user-output" class="output-field" readonly placeholder="ShadowNinja_404" aria-label="Username gerado">
+                    <button class="copy-btn" data-copy="user-output" aria-label="Copiar username">
+                        📋
+                    </button>
+                </div>
+                <button class="main-btn" data-action="users">
+                    <span class="btn-text">Gerar Username</span>
+                    <span class="btn-loader" aria-hidden="true"></span>
+                </button>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2026 ProGen Toolkit <span class="dot">•</span> Feito pela lS STUDIO❤️ para devs</p>
+        </footer>
+    </div>
+
+    <script src="gerador.js"></script>
+</body>
+</html>
