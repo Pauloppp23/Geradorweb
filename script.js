@@ -40,14 +40,13 @@ document.addEventListener('DOMContentLoaded', function() {
 function generateAll() {
     showLoading();
     
-    setTimeout(() => {
-        generateCPF();
-        generatePassword();
-        generateName();
-        generateUsername();
-        hideLoading();
-        addToHistory();
-    }, 300);
+    // GERAÇÃO INSTANTÂNEA - sem delay
+    generateCPF();
+    generatePassword();
+    generateName();
+    generateUsername();
+    hideLoading();
+    addToHistory();
 }
 
 function generateCPF() {
