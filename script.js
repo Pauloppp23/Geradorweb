@@ -13,19 +13,8 @@ class ProGen {
         // Theme toggle
         document.querySelector('.theme-toggle').addEventListener('click', () => this.toggleTheme());
         
-        // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchTab(e));
-            btn.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.switchTab(e);
-                }
-            });
-        });
-
-        // Main buttons
-        document.querySelectorAll('.main-btn').forEach(btn => {
+        // Generate buttons
+        document.querySelectorAll('.generate-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.handleGenerate(e));
         });
 
@@ -43,51 +32,31 @@ class ProGen {
         }
     }
 
-    switchTab(event) {
-        const btn = event.currentTarget;
-        const tabId = btn.dataset.tab;
-
-        // Update tabs
-        document.querySelectorAll('.tab-btn').forEach(b => {
-            b.classList.remove('active');
-            b.setAttribute('aria-selected', 'false');
-            b.setAttribute('tabindex', '-1');
-        });
-        document.querySelectorAll('.tab-content').forEach(c => {
-            c.classList.remove('active');
-            c.hidden = true;
-        });
-
-        btn.classList.add('active');
-        btn.setAttribute('aria-selected', 'true');
-        btn.setAttribute('tabindex', '0');
-
-        const tabContent = document.getElementById(tabId);
-        tabContent.classList.add('active');
-        tabContent.hidden = false;
-        tabContent.focus();
-
-        // Accessibility
-        const tabLabel = btn.getAttribute('aria-labelledby') || btn.textContent.trim();
-        this.announce(`Tab ${tabLabel} selecionado`);
-    }
-
     async handleGenerate(event) {
         const btn = event.currentTarget;
         const action = btn.dataset.action;
         
-        btn.classList.add('loading');
+        // Show loading
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoader = btn.querySelector('.btn-loader');
+        const originalText = btnText.innerHTML;
+        
+        btnText.style.opacity = '0';
+        btnLoader.classList.remove('d-none');
+        btn.disabled = true;
         
         try {
             await this.generateData(action);
         } finally {
-            btn.classList.remove('loading');
+            btnText.innerHTML = originalText;
+            btnText.style.opacity = '1';
+            btnLoader.classList.add('d-none');
+            btn.disabled = false;
         }
     }
 
     async generateData(type) {
-        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(800); // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1200)); // Loading effect
 
         switch(type) {
             case 'cpf':
@@ -107,6 +76,7 @@ class ProGen {
         this.showSuccessFeedback();
     }
 
+    // CPF Generator (Algoritmo oficial)
     generateCPF() {
         const n = Array.from({length: 9}, () => Math.floor(Math.random() * 10));
         let d1 = 0, d2 = 0;
@@ -130,6 +100,7 @@ class ProGen {
         }, '');
     }
 
+    // Password Generator (NIST Compliant)
     generatePassword() {
         const length = parseInt(document.getElementById('pass-length').value);
         const useNumbers = document.getElementById('use-numbers').checked;
@@ -143,100 +114,86 @@ class ProGen {
         for (let i = 0; i < length; i++) {
             password += charset.charAt(Math.floor(Math.random() * charset.length));
         }
-
         return password;
     }
 
+    // Name Generator
     generateName() {
-        const firstNames = ['João', 'Maria', 'Pedro', 'Ana', 'Lucas', 'Julia', 'Gabriel', 'Sofia', 'Matheus', 'Isabela'];
-        const middleNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes'];
-        const lastNames = ['da Silva', 'dos Santos', 'da Conceição', 'Pereira', 'Barbosa', 'Castro', 'Monteiro', 'Cardoso', 'Mendonça', 'Nunes'];
+        const firstNames = ['João', 'Maria', 'Pedro', 'Ana', 'Lucas', 'Julia', 'Gabriel', 'Sofia', 'Matheus', 'Isabela', 'José', 'Carlos', 'Fernanda', 'Rafael', 'Camila'];
+        const middleNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Carvalho', 'Barbosa', 'Marques'];
+        const lastNames = ['da Silva', 'dos Santos', 'da Conceição', 'Pereira', 'Barbosa', 'Castro', 'Monteiro', 'Cardoso', 'Mendonça', 'Nunes', 'Moreira', 'Dias', 'Rocha', 'Fernandes'];
 
         return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${middleNames[Math.floor(Math.random() * middleNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
     }
 
+    // Username Generator
     generateUsername() {
-        const prefixes = ['Shadow', 'Dark', 'Epic', 'Pro', 'Ninja', 'Ghost', 'Storm', 'Fire', 'Ice', 'Cyber'];
-        const suffixes = ['Player', 'Gamer', 'Master', 'King', 'Queen', 'Hero', 'Legend', 'Boss', 'Pro', 'X'];
-        const numbers = Math.floor(Math.random() * 9999);
+        const prefixes = ['Shadow', 'Dark', 'Epic', 'Pro', 'Ninja', 'Ghost', 'Storm', 'Fire', 'Ice', 'Cyber', 'Pixel', 'Nova', 'Vortex', 'Blaze', 'Frost'];
+        const suffixes = ['Player', 'Gamer', 'Master', 'King', 'Queen', 'Hero', 'Legend', 'Boss', 'Pro', 'X', 'Elite', 'Prime'];
+        const numbers = Math.floor(100 + Math.random() * 9900);
         const symbols = ['_', '-', '.'];
 
-        const style = Math.floor(Math.random() * 3);
+        const style = Math.floor(Math.random() * 4);
         switch(style) {
             case 0: return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${suffixes[Math.floor(Math.random() * suffixes.length)]}${numbers}`;
             case 1: return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${symbols[Math.floor(Math.random() * symbols.length)]}${numbers}`;
             case 2: return `x${prefixes[Math.floor(Math.random() * prefixes.length)]}${numbers}x`;
+            case 3: return `${numbers}${prefixes[Math.floor(Math.random() * prefixes.length)]}${symbols[Math.floor(Math.random() * symbols.length)]}${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+            default: return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${numbers}`;
         }
     }
 
+    // Copy to Clipboard
     copyToClipboard(event) {
         const btn = event.currentTarget;
         const targetId = btn.dataset.copy;
         const field = document.getElementById(targetId);
         
-        field.select();
-        field.setSelectionRange(0, 99999);
-        
         navigator.clipboard.writeText(field.value).then(() => {
-            const original = btn.innerHTML;
-            btn.innerHTML = '✅';
-            btn.style.background = '#10b981';
+            btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-outline-secondary');
             
             setTimeout(() => {
-                btn.innerHTML = original;
-                btn.style.background = '';
+                btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
             }, 2000);
-            
-            this.announce('Copiado para área de transferência');
-        }).catch(() => {
-            // Fallback
-            document.execCommand('copy');
         });
     }
 
-    showSuccessFeedback() {
-        // Visual feedback
-        document.querySelector('.content').style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            document.querySelector('.content').style.transform = '';
-        }, 150);
-    }
-
+    // Theme Toggle
     toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        const body = document.body;
+        const isDark = body.getAttribute('data-bs-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
         
-        document.documentElement.setAttribute('data-theme', newTheme);
+        body.setAttribute('data-bs-theme', newTheme);
         localStorage.setItem('progen-theme', newTheme);
+        
+        // Bootstrap theme change
+        new BootstrapTheme().setTheme(newTheme);
     }
 
     loadTheme() {
         const savedTheme = localStorage.getItem('progen-theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.body.setAttribute('data-bs-theme', savedTheme);
     }
 
     generateInitialData() {
-        // Generate initial CPF
         document.getElementById('cpf-output').value = this.generateCPF();
     }
 
-    announce(message) {
-        // Screen reader announcement
-        const announcement = document.createElement('div');
-        announcement.setAttribute('aria-live', 'polite');
-        announcement.setAttribute('aria-atomic', 'true');
-        announcement.style.position = 'absolute';
-        announcement.style.left = '-9999px';
-        announcement.textContent = message;
-        document.body.appendChild(announcement);
-        
+    showSuccessFeedback() {
+        const card = document.querySelector('.card');
+        card.style.transform = 'scale(0.98)';
         setTimeout(() => {
-            document.body.removeChild(announcement);
-        }, 1000);
+            card.style.transform = '';
+        }, 200);
     }
 }
 
-// Initialize when DOM is loaded
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     new ProGen();
 });
