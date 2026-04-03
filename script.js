@@ -1,168 +1,118 @@
-// DataForge Pro - script.js v3.0 - BULLETPROOF FAST LOADING
-// Removeu TODO loading - GERAÇÃO DIRETA E INSTANTÂNEA
-
+// DataForge Pro - BULLETPROOF & INSTANTÂNEO
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme setup
     const theme = localStorage.getItem('dataforge-theme') || 'dark';
     document.body.classList.add(theme + '-theme');
     document.getElementById('themeToggle').checked = theme === 'light';
     
     loadHistory();
-    
-    // Event listeners
-    document.getElementById('generateBtn').onclick = generateAll;
-    document.getElementById('clearHistoryBtn').onclick = clearHistory;
-    document.getElementById('themeToggle').onchange = toggleTheme;
-    document.getElementById('copyAllBtn').onclick = copyAllToClipboard;
-    
-    // Copy buttons
-    document.querySelectorAll('[data-copy]').forEach(btn => {
-        btn.onclick = () => copyToClipboard(btn.getAttribute('data-copy'));
-    });
+    setupEvents();
 });
 
+function setupEvents() {
+    document.getElementById('generateBtn').onclick = generateAll;
+    document.getElementById('copyAllBtn').onclick = copyAll;
+    document.getElementById('clearHistoryBtn').onclick = clearHistory;
+    document.getElementById('themeToggle').onchange = toggleTheme;
+    
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+        btn.onclick = () => copyToClipboard(btn.dataset.copy);
+    });
+}
+
 function generateAll() {
-    // SEM LOADING - GERA DIRETO E INSTANTÂNEO
     generateCPF();
     generatePassword();
     generateName();
     generateUsername();
     addToHistory();
     
-    // Feedback visual simples no botão
     const btn = document.getElementById('generateBtn');
-    btn.textContent = '✅ Gerado!';
+    btn.innerHTML = '<i class="bi bi-check-circle"></i> ✅ Gerado!';
     btn.classList.add('btn-success');
     setTimeout(() => {
-        btn.textContent = '🔥 Gerar Tudo';
+        btn.innerHTML = '<i class="bi bi-lightning-charge"></i> 🔥 Gerar Tudo';
         btn.classList.remove('btn-success');
-    }, 800);
+    }, 1000);
 }
 
 function generateCPF() {
-    let cpf = '';
-    let sum = 0;
-    
-    // 9 dígitos
+    let cpf = '', sum = 0;
     for (let i = 0; i < 9; i++) {
-        const n = Math.floor(Math.random() * 10);
-        cpf += n;
-        sum += n * (10 - i);
+        const n = ~~(Math.random() * 10);
+        cpf += n; sum += n * (10 - i);
     }
-    
-    // 1º dígito verificador
-    let r = (sum * 10) % 11;
-    cpf += r < 2 ? 0 : 11 - r;
-    
-    // 2º dígito verificador
-    sum = 0;
-    for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-    r = (sum * 10) % 11;
-    cpf += r < 2 ? 0 : 11 - r;
-    
+    let r = (sum * 10) % 11; cpf += r < 2 ? 0 : 11 - r;
+    sum = 0; for (let i = 0; i < 10; i++) sum += +cpf[i] * (11 - i);
+    r = (sum * 10) % 11; cpf += r < 2 ? 0 : 11 - r;
     document.getElementById('cpfResult').textContent = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
 function generatePassword() {
-    // SENHAS ULTRA FORTES 32+ CHARS - NIST 4+
-    const length = 32;
-    const special = document.getElementById('includeSpecial').checked;
+    const len = Math.max(32, +document.getElementById('passwordLength').value);
+    const spec = document.getElementById('includeSpecial').checked;
     
-    const lower = 'abcdefghijklmnopqrstuvwxyz';
-    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const nums = '0123456789';
-    const syms = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-    
+    const s = {l:'abcdefghijklmnopqrstuvwxyz',u:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',n:'0123456789',s:'!@#$%^&*()_+-=[]{}|;:,.<>?'} 
     let pwd = '';
     
-    // 4+ de cada tipo
-    [lower, upper, nums].forEach(set => {
-        for (let i = 0; i < 4; i++) pwd += set[Math.floor(Math.random() * set.length)];
-    });
-    if (special) {
-        for (let i = 0; i < 4; i++) pwd += syms[Math.floor(Math.random() * syms.length)];
-    }
+    ['l','u','n'].forEach(t => {for(let i=0;i<4;i++) pwd += s[t][~~(Math.random()*s[t].length)]});
+    if(spec) for(let i=0;i<4;i++) pwd += s.s[~~(Math.random()*s.s.length)];
     
-    // Resto aleatório
-    const all = special ? lower+upper+nums+syms : lower+upper+nums;
-    while (pwd.length < length) pwd += all[Math.floor(Math.random() * all.length)];
+    const all = spec ? s.l+s.u+s.n+s.s : s.l+s.u+s.n;
+    while(pwd.length < len) pwd += all[~~(Math.random()*all.length)];
     
-    // Shuffle duplo
-    pwd = shuffle(pwd);
-    pwd = shuffle(pwd);
-    
-    document.getElementById('passwordResult').textContent = pwd.slice(0, length);
-    document.getElementById('passwordStrength').textContent = '🔒 128+ bits';
+    pwd = shuffle(shuffle(pwd));
+    document.getElementById('passwordResult').textContent = pwd;
+    document.getElementById('passwordStrength').textContent = '🔒 NIST Ultra';
 }
 
-function shuffle(str) {
-    const arr = str.split('');
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+function shuffle(s) {
+    for(let i=s.length-1;i>0;i--) {
+        const j=~~(Math.random()*(i+1));
+        [s[i],s[j]]=[s[j],s[i]];
     }
-    return arr.join('');
+    return s;
 }
 
 function generateName() {
-    const first = ['João','Maria','José','Ana','Antonio','Francisco','Paulo','Pedro','Lucas','Gabriel','Rafael','Diego'].random();
-    const last = ['Silva','Santos','Oliveira','Souza','Rodrigues','Ferreira','Alves','Pereira','Lima','Gomes','Costa'].random();
-    document.getElementById('nameResult').textContent = `${first} ${last}`;
+    const f = ['João','Maria','José','Ana','Pedro','Lucas','Ana','Gabriel','Rafael','Diego','Eduardo'];
+    const l = ['Silva','Santos','Oliveira','Souza','Rodrigues','Alves','Pereira','Lima','Gomes'];
+    document.getElementById('nameResult').textContent = f[~~(Math.random()*f.length)] + ' ' + l[~~(Math.random()*l.length)];
 }
 
 function generateUsername() {
-    const adj = ['Fast','Deadly','Silent','Rage','Fire','Ice','Shadow','Storm'].random();
-    const suf = ['Master','King','God','Pro','Kill','Slayer'].random();
-    document.getElementById('usernameResult').textContent = `${adj}${suf}_${Math.floor(Math.random() * 99999)}`;
+    const a = ['Fast','Deadly','Rage','Fire','Ice','Shadow'];
+    const su = ['King','Pro','Kill'];
+    document.getElementById('usernameResult').textContent = 'xX' + a[~~(Math.random()*a.length)] + su[~~(Math.random()*su.length)] + '_' + ~~(Math.random()*99999);
 }
-
-// Polyfill para .random()
-Array.prototype.random = function() {
-    return this[Math.floor(Math.random() * this.length)];
-};
 
 function copyToClipboard(id) {
     navigator.clipboard.writeText(document.getElementById(id).textContent);
     showToast('✅ Copiado!');
 }
 
-function copyAllToClipboard() {
-    const text = [
-        document.getElementById('cpfResult').textContent,
-        document.getElementById('passwordResult').textContent,
-        document.getElementById('nameResult').textContent,
-        document.getElementById('usernameResult').textContent
-    ].join('\n');
-    navigator.clipboard.writeText(text);
+function copyAll() {
+    const t = Array.from(document.querySelectorAll('.result-box')).map(e=>e.textContent).join('\n');
+    navigator.clipboard.writeText(t);
     showToast('🎉 Tudo copiado!');
 }
 
-function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('d-none');
-    setTimeout(() => toast.classList.add('d-none'), 2000);
+function showToast(m) {
+    const t = document.getElementById('toast');
+    t.textContent = m;
+    t.classList.remove('d-none');
+    setTimeout(()=>t.classList.add('d-none'), 2000);
 }
 
 function toggleTheme() {
-    const isLight = document.getElementById('themeToggle').checked;
-    const theme = isLight ? 'light' : 'dark';
-    document.body.classList.toggle('dark-theme', theme === 'dark');
-    document.body.classList.toggle('light-theme', theme === 'light');
-    localStorage.setItem('dataforge-theme', theme);
+    document.body.classList.toggle('dark-theme');
+    document.body.classList.toggle('light-theme');
+    localStorage.setItem('dataforge-theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
 }
 
-// History
 function addToHistory() {
     const h = JSON.parse(localStorage.getItem('dataforge-history') || '[]');
-    h.unshift({
-        t: new Date().toLocaleString('pt-BR'),
-        c: document.getElementById('cpfResult').textContent,
-        p: document.getElementById('passwordResult').textContent,
-        n: document.getElementById('nameResult').textContent,
-        u: document.getElementById('usernameResult').textContent
-    });
-    if (h.length > 20) h.length = 20;
+    h.unshift({t:new Date().toLocaleString('pt-BR'),c:document.getElementById('cpfResult').textContent,p:document.getElementById('passwordResult').textContent,n:document.getElementById('nameResult').textContent,u:document.getElementById('usernameResult').textContent});
+    if(h.length>20) h.length=20;
     localStorage.setItem('dataforge-history', JSON.stringify(h));
     renderHistory(h);
 }
@@ -170,37 +120,35 @@ function addToHistory() {
 function loadHistory() { renderHistory(JSON.parse(localStorage.getItem('dataforge-history') || '[]')); }
 
 function renderHistory(h) {
-    document.getElementById('historyList').innerHTML = h.map((e,i) => `
-        <div class="history-item p-2 border rounded mb-2">
-            <div class="d-flex justify-content-between align-items-start">
-                <small class="text-muted">${e.t}</small>
+    document.getElementById('historyList').innerHTML = h.map((e,i)=>`
+        <div class="history-item p-2 mb-2 rounded bg-opacity-20">
+            <div class="d-flex justify-content-between small">
+                <span>${e.t}</span>
                 <div>
-                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyHistory(${i})">📋</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="delHistory(${i})">🗑</button>
+                    <button class="btn btn-sm p-0 me-1" onclick="copyH(${i})">📋</button>
+                    <button class="btn btn-sm p-0" onclick="delH(${i})">🗑</button>
                 </div>
             </div>
-            <small class="text-wrap">
-                CPF: ${e.c} | ${e.n} | ${e.u} | Senha: ${e.p}
-            </small>
+            <div class="small mt-1">${e.c} | ${e.n} | ${e.p.substring(0,20)}...</div>
         </div>
     `).join('');
 }
 
-function copyHistory(i) {
+function copyH(i) {
     const h = JSON.parse(localStorage.getItem('dataforge-history') || '[]');
     navigator.clipboard.writeText(Object.values(h[i]).slice(1).join('\n'));
     showToast('Item copiado!');
 }
 
-function delHistory(i) {
+function delH(i) {
     const h = JSON.parse(localStorage.getItem('dataforge-history') || '[]');
-    h.splice(i, 1);
+    h.splice(i,1);
     localStorage.setItem('dataforge-history', JSON.stringify(h));
     renderHistory(h);
 }
 
 function clearHistory() {
-    if (confirm('Limpar histórico?')) {
+    if(confirm('Limpar histórico?')) {
         localStorage.removeItem('dataforge-history');
         document.getElementById('historyList').innerHTML = '';
         showToast('Limpo!');
