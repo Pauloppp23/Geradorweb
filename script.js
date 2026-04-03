@@ -1,267 +1,337 @@
-// NeoForge AI - Core Engine v1.0
-class NeoForge {
+// script.js
+class NeoForgeAI {
     constructor() {
+        this.history = JSON.parse(localStorage.getItem('neoForgeHistory') || '[]');
+        this.theme = localStorage.getItem('neoForgeTheme') || 'dark';
         this.init();
-        this.bindEvents();
-        this.loadSettings();
     }
 
     init() {
-        // Loading animation
+        this.setupEventListeners();
+        this.applyTheme();
+        this.loadHistory();
+        this.startLoadingSequence();
+    }
+
+    startLoadingSequence() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        const progressBar = document.querySelector('.progress-bar-fill');
+        const mainApp = document.getElementById('mainApp');
+
+        // Simulate smooth loading
         setTimeout(() => {
-            document.getElementById('loadingScreen').style.opacity = '0';
-            setTimeout(() => document.getElementById('loadingScreen').remove(), 500);
+            loadingScreen.style.animation = 'fadeIn 0.5s ease-out reverse forwards';
+            mainApp.style.opacity = '0';
+            mainApp.style.transform = 'translateY(20px)';
         }, 1500);
 
-        // Data pools
-        this.names = {
-            pt: {
-                male: ['João', 'Pedro', 'Lucas', 'Gabriel', 'Rafael', 'Diego', 'Eduardo', 'Bruno', 'Felipe', 'Marcos'],
-                female: ['Maria', 'Ana', 'Juliana', 'Camila', 'Beatriz', 'Larissa', 'Fernanda', 'Patricia', 'Vanessa', 'Carolina'],
-                surnames: ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes']
-            },
-            en: {
-                male: ['James', 'Michael', 'William', 'David', 'John', 'Robert', 'Thomas', 'Charles', 'Christopher', 'Daniel'],
-                female: ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'],
-                surnames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
-            }
-        };
-
-        this.history = JSON.parse(localStorage.getItem('neoforge-history') || '[]');
-        this.renderHistory();
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            mainApp.style.opacity = '1';
+            mainApp.style.transform = 'translateY(0)';
+            mainApp.classList.add('fade-in');
+        }, 2000);
     }
 
-    bindEvents() {
-        document.getElementById('generateAllBtn').onclick = () => this.generateAll();
-        document.getElementById('clearAllBtn').onclick = () => this.clearAll();
-        document.getElementById('themeToggle').onclick = () => this.toggleTheme();
-        document.getElementById('clearHistoryBtn').onclick = () => this.clearHistory();
+    setupEventListeners() {
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
 
-        // Password controls
-        document.getElementById('pwdLength').oninput = (e) => {
-            document.getElementById('pwdLengthVal').textContent = e.target.value;
-        };
-
-        // Copy buttons
-        document.querySelectorAll('[data-copy]').forEach(btn => {
-            btn.onclick = () => this.copyToClipboard(btn.dataset.copy);
+        // Generator buttons
+        document.querySelectorAll('.btn-generate').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const card = btn.closest('.generator-card');
+                this.generateData(card.dataset.type);
+            });
         });
 
-        // Language toggle
-        document.getElementById('nameLang').onchange = () => this.generateName();
+        // Card clicks
+        document.querySelectorAll('.generator-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-generate, .copy-btn, input, .form-check')) {
+                    this.generateData(card.dataset.type);
+                }
+            });
+        });
+
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.copyToClipboard(btn.dataset.target));
+        });
+
+        // Password controls
+        document.getElementById('pwdLength').addEventListener('input', (e) => {
+            this.updatePasswordStrength(e.target.value);
+        });
+        document.querySelectorAll('#pwdUpper, #pwdLower, #pwdNumbers, #pwdSymbols').forEach(cb => {
+            cb.addEventListener('change', () => this.updatePasswordStrength());
+        });
+
+        // Name language toggle
+        document.getElementById('nameLang').addEventListener('change', () => {
+            document.querySelector('[for="nameLang"]').textContent = 
+                document.getElementById('nameLang').checked ? 'Português' : 'English';
+        });
+
+        // History clear
+        document.getElementById('clearHistory').addEventListener('click', () => this.clearHistory());
+        document.getElementById('clearHistoryMobile').addEventListener('click', () => this.clearHistory());
+
+        // Generate initial data
+        setTimeout(() => {
+            this.generateData('cpf');
+            this.generateData('password');
+            this.generateData('names');
+            this.generateData('nicknames');
+        }, 2200);
     }
 
-    generateAll() {
-        this.generateCPF();
-        this.generatePassword();
-        this.generateName();
-        this.generateUsername();
-        this.addToHistory();
-        this.showNotification('⚡ Todos os dados gerados!');
+    generateData(type) {
+        let result;
+        
+        switch(type) {
+            case 'cpf':
+                result = this.generateCPF();
+                break;
+            case 'password':
+                result = this.generatePassword();
+                break;
+            case 'names':
+                result = this.generateName();
+                break;
+            case 'nicknames':
+                result = this.generateNickname();
+                break;
+        }
+
+        const target = document.getElementById(type === 'names' ? 'nameResult' : `${type}Result`);
+        target.textContent = result;
+        target.parentElement.style.animation = 'none';
+        setTimeout(() => target.parentElement.classList.add('fade-in'), 10);
+
+        this.addToHistory(type, result);
     }
 
     generateCPF() {
-        let cpf = '';
-        let sum = 0;
-
-        // 9 random digits
-        for (let i = 0; i < 9; i++) {
-            const digit = Math.floor(Math.random() * 10);
-            cpf += digit;
-            sum += digit * (10 - i);
+        const n = Array(9).fill(0).map(() => Math.floor(Math.random() * 10));
+        let d1 = 0, d2 = 0;
+        
+        for(let i = 0; i < 9; i++) {
+            d1 += n[8-i] * (10-i);
+            d2 += n[8-i] * (11-i);
         }
-
-        // First check digit
-        let remainder = (sum * 10) % 11;
-        cpf += remainder < 2 ? 0 : 11 - remainder;
-
-        // Second check digit
-        sum = 0;
-        for (let i = 0; i < 10; i++) {
-            sum += parseInt(cpf[i]) * (11 - i);
-        }
-        remainder = (sum * 10) % 11;
-        cpf += remainder < 2 ? 0 : 11 - remainder;
-
-        // Format
-        document.getElementById('cpfOutput').textContent = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        
+        d1 = (d1 * 10) % 11;
+        d2 = ((d2 + d1 * 2) * 10) % 11;
+        
+        n.push(d1 > 9 ? 0 : d1);
+        n.push(d2 > 9 ? 0 : d2);
+        
+        return n.reduce((acc, digit, i) => {
+            if(i === 3 || i === 6) acc += '.';
+            else if(i === 9) acc += '-';
+            acc += digit;
+            return acc;
+        }, '');
     }
 
     generatePassword() {
         const length = parseInt(document.getElementById('pwdLength').value);
-        const lower = document.getElementById('pwdLower').checked;
-        const upper = document.getElementById('pwdUpper').checked;
-        const numbers = document.getElementById('pwdNumbers').checked;
-        const symbols = document.getElementById('pwdSymbols').checked;
+        const useUpper = document.getElementById('pwdUpper').checked;
+        const useLower = document.getElementById('pwdLower').checked;
+        const useNumbers = document.getElementById('pwdNumbers').checked;
+        const useSymbols = document.getElementById('pwdSymbols').checked;
 
-        const charset = [];
-        if (lower) charset.push('abcdefghijklmnopqrstuvwxyz');
-        if (upper) charset.push('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-        if (numbers) charset.push('0123456789');
-        if (symbols) charset.push('!@#$%^&*()_+-=[]{}|;:,.<>?');
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
 
-        let password = '';
-        const allChars = charset.join('');
+        let charset = '';
+        const required = [];
 
-        // Ensure at least one of each type
-        [lower && 'abcdefghijklmnopqrstuvwxyz', upper && 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
-         numbers && '0123456789', symbols && '!@#$%^&*()'].forEach(set => {
-            if (set) password += set[Math.floor(Math.random() * set.length)];
-        });
+        if(useUpper) { charset += upper; required.push(upper[Math.floor(Math.random() * upper.length)]); }
+        if(useLower) { charset += lower; required.push(lower[Math.floor(Math.random() * lower.length)]); }
+        if(useNumbers) { charset += numbers; required.push(numbers[Math.floor(Math.random() * numbers.length)]); }
+        if(useSymbols) { charset += symbols; required.push(symbols[Math.floor(Math.random() * symbols.length)]); }
 
-        // Fill remaining length
-        for (let i = password.length; i < length; i++) {
-            password += allChars[Math.floor(Math.random() * allChars.length)];
+        // Ensure minimum 4 of each required type
+        for(let type of ['upper', 'lower', 'numbers', 'symbols']) {
+            if((type === 'upper' && useUpper) || (type === 'lower' && useLower) || 
+               (type === 'numbers' && useNumbers) || (type === 'symbols' && useSymbols)) {
+                for(let i = 0; i < 4; i++) {
+                    required.push(this.getRandomChar(type));
+                }
+            }
         }
 
-        // Shuffle
-        password = this.shuffleString(password);
+        // Leetspeak transformation
+        const leetMap = {'a':'4','e':'3','i':'1','o':'0','s':'5','t':'7'};
+        let password = required.sort(() => Math.random() - 0.5).join('') + 
+                      Array.from({length: length - required.length}, () => 
+                          charset[Math.floor(Math.random() * charset.length)]);
 
-        document.getElementById('passwordOutput').textContent = password;
-        document.getElementById('passwordStrength').textContent = this.getPasswordStrength(password);
-        document.getElementById('passwordStrength').className = `strength-indicator ${this.getStrengthClass(password)}`;
+        // Apply leetspeak to some characters
+        password = password.split('').map(char => {
+            if(Math.random() < 0.3 && leetMap[char.toLowerCase()]) {
+                return leetMap[char.toLowerCase()];
+            }
+            return char;
+        }).join('');
+
+        // Double shuffle for extra entropy
+        for(let i = 0; i < 2; i++) {
+            password = password.split('').sort(() => Math.random() - 0.5).join('');
+        }
+
+        this.updatePasswordStrength(length);
+        return password.slice(0, length);
     }
 
-    getPasswordStrength(password) {
-        const lengthScore = Math.min(password.length / 80, 1);
-        const hasLower = /[a-z]/.test(password);
-        const hasUpper = /[A-Z]/.test(password);
-        const hasNumbers = /\d/.test(password);
-        const hasSymbols = /[^a-zA-Z\d]/.test(password);
-
-        const score = (lengthScore * 0.4) + (hasLower ? 0.15 : 0) + (hasUpper ? 0.15 : 0) + 
-                     (hasNumbers ? 0.15 : 0) + (hasSymbols ? 0.15 : 0);
-
-        if (score >= 0.9) return '🔒 NIST Level 4 Ultra';
-        if (score >= 0.7) return '🛡️ NIST Level 3 Forte';
-        if (score >= 0.5) return '✅ Forte';
-        return '⚠️ Média';
-    }
-
-    getStrengthClass(password) {
-        const score = this.getPasswordStrength(password).includes('Ultra') ? 1 : 
-                     this.getPasswordStrength(password).includes('Forte') ? 0.7 : 0.4;
-        return score >= 0.7 ? 'ultra' : score >= 0.5 ? 'strong' : 'medium';
+    getRandomChar(type) {
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const numbers = '0123456789';
+        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+        
+        switch(type) {
+            case 'upper': return upper[Math.floor(Math.random() * upper.length)];
+            case 'lower': return lower[Math.floor(Math.random() * lower.length)];
+            case 'numbers': return numbers[Math.floor(Math.random() * numbers.length)];
+            case 'symbols': return symbols[Math.floor(Math.random() * symbols.length)];
+        }
     }
 
     generateName() {
-        const isPT = !document.getElementById('nameLang').checked;
-        const pool = this.names[isPT ? 'pt' : 'en'];
+        const ptNames = {
+            male: ['João', 'Pedro', 'Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Guilherme', 'Samuel', 'Henrique', 'Eduardo'],
+            female: ['Maria', 'Ana', 'Julia', 'Beatriz', 'Laura', 'Sofia', 'Manu', 'Clara', 'Luiza', 'Cecilia'],
+            surnames: ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes']
+        };
+        
+        const enNames = {
+            male: ['James', 'Robert', 'John', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles'],
+            female: ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'],
+            surnames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
+        };
+
+        const isPt = document.getElementById('nameLang').checked;
+        const names = isPt ? ptNames : enNames;
         const gender = Math.random() > 0.5 ? 'male' : 'female';
-        const first = pool[gender][Math.floor(Math.random() * pool[gender].length)];
-        const surnames = pool.surnames.sort(() => Math.random() - 0.5).slice(0, 2);
         
-        document.getElementById('nameOutput').textContent = `${first} ${surnames.join(' ')}`;
+        const first = names[gender][Math.floor(Math.random() * names[gender].length)];
+        const last = names.surnames[Math.floor(Math.random() * names.surnames.length)];
+        
+        return `${first} ${last}`;
     }
 
-    generateUsername() {
-        const prefixes = ['xX', 'iAm', 'Pro', 'Noob', 'Epic', '_', ''];
-        const adjectives = ['Shadow', 'Fire', 'Ice', 'Ghost', 'Rage', 'Storm', 'Blade', 'Ninja'];
-        const nouns = ['King', 'God', 'Pro', 'Master', 'Slayer', 'Hunter', 'Killer', 'Beast'];
-        
-        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-        const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-        const noun = nouns[Math.floor(Math.random() * nouns.length)];
-        const number = Math.floor(Math.random() * 9999);
-        
-        document.getElementById('usernameOutput').textContent = `${prefix}${adj}${noun}_${number}`;
-    }
+    generateNickname() {
+        const prefixes = ['xX', 'Pro', 'Neo', 'Dark', 'Ghost', 'Shadow', 'Fire', 'Ice', 'Ninja', 'Elite'];
+        const suffixes = ['Killer', 'Master', 'Pro', 'God', 'King', 'Queen', 'Boss', 'Legend', 'Hero', 'Ninja'];
+        const gamerWords = ['PvP', 'NoobSlayer', 'Headshot', 'Rage', 'Clutch', 'Carry', 'GG', 'WP', 'EZ'];
 
-    shuffleString(str) {
-        const array = str.split('');
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+        const style = Math.floor(Math.random() * 3);
+        let nick = '';
+
+        switch(style) {
+            case 0: // xX_Nick_Xx
+                nick = `${prefixes[Math.floor(Math.random()*prefixes.length)]}_${this.randomWord()}_${suffixes[Math.floor(Math.random()*suffixes.length)]}`;
+                break;
+            case 1: // ProNick123
+                nick = `Pro${this.randomWord()}${Math.floor(Math.random()*9999)}`;
+                break;
+            case 2: // NickPvP
+                nick = `${this.randomWord()}${gamerWords[Math.floor(Math.random()*gamerWords.length)]}`;
+                break;
         }
-        return array.join('');
+
+        return nick;
     }
 
-    copyToClipboard(elementId) {
-        const text = document.getElementById(elementId).textContent;
+    randomWord() {
+        const words = 'a b c d e f g h i j k l m n o p q r s t u v w x y z'.split(' ');
+        return words[Math.floor(Math.random()*words.length)].toUpperCase() + 
+               words[Math.floor(Math.random()*words.length)].toUpperCase();
+    }
+
+    updatePasswordStrength(length = document.getElementById('pwdLength').value) {
+        const fill = document.getElementById('strengthFill');
+        const text = document.getElementById('strengthText');
+        
+        const strength = Math.min(100, (length / 128) * 100);
+        fill.style.width = strength + '%';
+        
+        if(strength >= 95) {
+            text.textContent = '🔒 NIST Level 4+ (Ultra Forte)';
+            text.className = 'text-success';
+        } else if(strength >= 80) {
+            text.textContent = '🛡️ NIST Level 3 (Muito Forte)';
+            text.className = 'text-success';
+        }
+    }
+
+    copyToClipboard(targetId) {
+        const text = document.getElementById(targetId).textContent;
         navigator.clipboard.writeText(text).then(() => {
-            const btn = event.target.closest('.copy-btn');
-            const original = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
-            btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.style.background = '';
-            }, 1500);
+            this.showToast();
         });
     }
 
-    addToHistory() {
-        const entry = {
-            timestamp: new Date().toLocaleString('pt-BR'),
-            cpf: document.getElementById('cpfOutput').textContent,
-            password: document.getElementById('passwordOutput').textContent,
-            name: document.getElementById('nameOutput').textContent,
-            username: document.getElementById('usernameOutput').textContent
-        };
-
-        this.history.unshift(entry);
-        if (this.history.length > 50) this.history.length = 50;
-        localStorage.setItem('neoforge-history', JSON.stringify(this.history));
-        this.renderHistory();
+    showToast() {
+        const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+        toast.show();
     }
 
-    renderHistory() {
-        const container = document.getElementById('historyList');
-        container.innerHTML = this.history.slice(0, 10).map(entry => `
-            <div class="history-item">
-                <div class="history-meta">
-                    <span class="time">${entry.timestamp}</span>
-                </div>
-                <div class="history-data">
-                    <span class="data-item">${entry.cpf}</span>
-                    <span class="data-item">${entry.name}</span>
-                    <span class="data-item">${entry.username}</span>
-                    <span class="data-item password-preview">${entry.password.slice(0, 20)}...</span>
+    addToHistory(type, value) {
+        const timestamp = new Date().toLocaleString('pt-BR');
+        const item = { type, value: value.slice(0, 50) + (value.length > 50 ? '...' : ''), timestamp };
+        
+        this.history.unshift(item);
+        this.history = this.history.slice(0, 50); // Keep last 50
+        
+        localStorage.setItem('neoForgeHistory', JSON.stringify(this.history));
+        this.loadHistory();
+    }
+
+    loadHistory() {
+        const list = document.getElementById('historyList');
+        const mobileList = document.getElementById('mobileHistoryList');
+        
+        list.innerHTML = this.history.map(item => `
+            <div class="history-item ${item.type} fade-in" onclick="neoForge.copyToClipboard('${item.type}Result')">
+                <div class="d-flex justify-content-between">
+                    <span>${item.value}</span>
+                    <small class="opacity-75">${item.timestamp}</small>
                 </div>
             </div>
-        `).join('') || '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nenhum histórico</p></div>';
-    }
-
-    clearAll() {
-        document.getElementById('cpfOutput').textContent = '000.000.000-00';
-        document.getElementById('passwordOutput').textContent = 'Clique para gerar';
-        document.getElementById('nameOutput').textContent = 'Nome Completo';
-        document.getElementById('usernameOutput').textContent = 'Nickname Gamer';
-        this.showNotification('🧹 Tudo limpo!');
+        `).join('');
+        
+        mobileList.innerHTML = list.innerHTML;
     }
 
     clearHistory() {
-        if (confirm('Limpar todo histórico?')) {
-            this.history = [];
-            localStorage.removeItem('neoforge-history');
-            this.renderHistory();
-            this.showNotification('🗑️ Histórico limpo!');
-        }
+        this.history = [];
+        localStorage.removeItem('neoForgeHistory');
+        this.loadHistory();
     }
 
     toggleTheme() {
-        document.body.classList.toggle('light-theme');
-        document.body.classList.toggle('dark-theme');
-        localStorage.setItem('neoforge-theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+        document.body.classList.toggle('theme-light');
+        this.theme = document.body.classList.contains('theme-light') ? 'light' : 'dark';
+        localStorage.setItem('neoForgeTheme', this.theme);
+        
+        const icon = document.getElementById('themeToggle').querySelector('i');
+        icon.className = this.theme === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
     }
 
-    loadSettings() {
-        const savedTheme = localStorage.getItem('neoforge-theme');
-        if (savedTheme === 'light') {
-            document.body.classList.add('light-theme');
-            document.body.classList.remove('dark-theme');
-            document.getElementById('themeToggle').checked = true;
+    applyTheme() {
+        if(this.theme === 'light') {
+            document.body.classList.add('theme-light');
+            document.getElementById('themeToggle').querySelector('i').className = 'bi bi-sun-fill';
         }
-    }
-
-    showNotification(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification';
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
     }
 }
 
-// Initialize
-const neoforge = new NeoForge();
+// Initialize app
+const neoForge = new NeoForgeAI();
