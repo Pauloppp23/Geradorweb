@@ -1,337 +1,436 @@
 // script.js
-class NeoForgeAI {
+class LSAI {
     constructor() {
-        this.history = JSON.parse(localStorage.getItem('neoForgeHistory') || '[]');
-        this.theme = localStorage.getItem('neoForgeTheme') || 'dark';
+        this.currentChatId = null;
+        this.chats = [];
+        this.messages = [];
+        this.apiKey = localStorage.getItem('lsai_api_key') || '';
         this.init();
     }
 
-    init() {
+    async init() {
         this.setupEventListeners();
-        this.applyTheme();
-        this.loadHistory();
-        this.startLoadingSequence();
+        this.loadApiKey();
+        await this.startLoadingSequence();
+        await this.initFirebase();
+        this.loadTheme();
+        this.showToast('LS AI inicializado com sucesso!', 'success');
     }
 
-    startLoadingSequence() {
+    async startLoadingSequence() {
         const loadingScreen = document.getElementById('loadingScreen');
         const progressBar = document.querySelector('.progress-bar-fill');
-        const mainApp = document.getElementById('mainApp');
+        const appContainer = document.getElementById('mainApp');
 
-        // Simulate smooth loading
-        setTimeout(() => {
-            loadingScreen.style.animation = 'fadeIn 0.5s ease-out reverse forwards';
-            mainApp.style.opacity = '0';
-            mainApp.style.transform = 'translateY(20px)';
-        }, 1500);
-
-        setTimeout(() => {
-            loadingScreen.style.display = 'none';
-            mainApp.style.opacity = '1';
-            mainApp.style.transform = 'translateY(0)';
-            mainApp.classList.add('fade-in');
-        }, 2000);
+        return new Promise(resolve => {
+            setTimeout(() => {
+                loadingScreen.style.animation = 'slideInUp 0.5s ease-out reverse forwards';
+                appContainer.classList.add('show');
+            }, 1800);
+            
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                resolve();
+            }, 2300);
+        });
     }
 
     setupEventListeners() {
-        // Theme toggle
+        // API Key
+        document.getElementById('saveApiKey').addEventListener('click', () => this.saveApiKey());
+        document.getElementById('apiKeyInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.saveApiKey();
+        });
+
+        // Chat
+        document.getElementById('newChatBtn').addEventListener('click', () => this.createNewChat());
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+        document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+
+        // UI
         document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+        document.getElementById('toggleSidebar').addEventListener('click', () => this.toggleSidebar());
+        
+        // Auth
+        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+    }
 
-        // Generator buttons
-        document.querySelectorAll('.btn-generate').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const card = btn.closest('.generator-card');
-                this.generateData(card.dataset.type);
-            });
+    async initFirebase() {
+        const { auth, db } = window.firebase;
+        
+        // Auth state observer
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                this.user = user;
+                this.showUserProfile();
+                await this.loadUserChats();
+            } else {
+                this.showLoginPrompt();
+            }
         });
 
-        // Card clicks
-        document.querySelectorAll('.generator-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn-generate, .copy-btn, input, .form-check')) {
-                    this.generateData(card.dataset.type);
+        // Google Login (call when needed)
+        this.googleLogin = () => signInWithPopup(auth, window.firebase.provider);
+    }
+
+    showLoginPrompt() {
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-shield-lock display-1 text-muted mb-4"></i>
+                <h4>Faça login para continuar</h4>
+                <p class="text-muted mb-4">Conecte sua conta Google para acessar o LS AI</p>
+                <button class="btn btn-primary btn-lg px-4" id="googleLoginBtn">
+                    <i class="bi bi-google me-2"></i>Entrar com Google
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('userProfile').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'none';
+        
+        // Add login button listener
+        container.querySelector('#googleLoginBtn').addEventListener('click', this.googleLogin);
+    }
+
+    showUserProfile() {
+        document.getElementById('userAvatar').src = this.user.photoURL;
+        document.getElementById('userName').textContent = this.user.displayName;
+        document.getElementById('userProfile').style.display = 'flex';
+        document.getElementById('logoutBtn').style.display = 'block';
+    }
+
+    async loadUserChats() {
+        if (!this.user) return;
+        
+        const q = query(
+            collection(window.firebase.db, 'chats'),
+            where('userId', '==', this.user.uid),
+            orderBy('createdAt', 'desc')
+        );
+
+        onSnapshot(q, (snapshot) => {
+            this.chats = [];
+            snapshot.forEach((doc) => {
+                this.chats.push({ id: doc.id, ...doc.data() });
+            });
+            this.renderChatList();
+            if (this.chats.length > 0 && !this.currentChatId) {
+                this.selectChat(this.chats[0].id);
+            }
+        });
+    }
+
+    renderChatList() {
+        const chatList = document.getElementById('chatList');
+        chatList.innerHTML = this.chats.map(chat => `
+            <div class="chat-item ${this.currentChatId === chat.id ? 'active' : ''}" data-chat-id="${chat.id}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-semibold">${chat.title || 'Novo Chat'}</div>
+                        <small class="text-muted">${chat.lastMessage?.slice(0, 40)}...</small>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm p-1 text-muted" onclick="lsai.renameChat('${chat.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm p-1 text-muted" onclick="lsai.deleteChat('${chat.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('') || '<div class="text-muted p-4 text-center">Nenhum chat criado</div>';
+
+        // Add click listeners
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn')) {
+                    this.selectChat(item.dataset.chatId);
                 }
             });
         });
+    }
 
-        // Copy buttons
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.copyToClipboard(btn.dataset.target));
+    async createNewChat() {
+        if (!this.user) {
+            this.showToast('Faça login primeiro', 'warning');
+            return;
+        }
+
+        const chatRef = await addDoc(collection(window.firebase.db, 'chats'), {
+            userId: this.user.uid,
+            title: 'Novo Chat',
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
 
-        // Password controls
-        document.getElementById('pwdLength').addEventListener('input', (e) => {
-            this.updatePasswordStrength(e.target.value);
+        this.currentChatId = chatRef.id;
+        this.messages = [];
+        this.updateChatTitle('Novo Chat');
+        this.renderMessages();
+        this.renderChatList();
+    }
+
+    async selectChat(chatId) {
+        this.currentChatId = chatId;
+        const chat = this.chats.find(c => c.id === chatId);
+        
+        this.updateChatTitle(chat.title || 'Chat');
+        
+        // Load messages
+        const q = query(
+            collection(window.firebase.db, `chats/${chatId}/messages`),
+            orderBy('timestamp', 'asc')
+        );
+        
+        onSnapshot(q, (snapshot) => {
+            this.messages = [];
+            snapshot.forEach(doc => {
+                this.messages.push({ id: doc.id, ...doc.data() });
+            });
+            this.renderMessages();
+            this.scrollToBottom();
         });
-        document.querySelectorAll('#pwdUpper, #pwdLower, #pwdNumbers, #pwdSymbols').forEach(cb => {
-            cb.addEventListener('change', () => this.updatePasswordStrength());
-        });
 
-        // Name language toggle
-        document.getElementById('nameLang').addEventListener('change', () => {
-            document.querySelector('[for="nameLang"]').textContent = 
-                document.getElementById('nameLang').checked ? 'Português' : 'English';
-        });
-
-        // History clear
-        document.getElementById('clearHistory').addEventListener('click', () => this.clearHistory());
-        document.getElementById('clearHistoryMobile').addEventListener('click', () => this.clearHistory());
-
-        // Generate initial data
-        setTimeout(() => {
-            this.generateData('cpf');
-            this.generateData('password');
-            this.generateData('names');
-            this.generateData('nicknames');
-        }, 2200);
+        this.renderChatList();
     }
 
-    generateData(type) {
-        let result;
+    async sendMessage() {
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
         
-        switch(type) {
-            case 'cpf':
-                result = this.generateCPF();
-                break;
-            case 'password':
-                result = this.generatePassword();
-                break;
-            case 'names':
-                result = this.generateName();
-                break;
-            case 'nicknames':
-                result = this.generateNickname();
-                break;
+        if (!message || !this.currentChatId || !this.apiKey) {
+            if (!this.apiKey) this.showToast('Insira sua API Key primeiro', 'warning');
+            return;
         }
 
-        const target = document.getElementById(type === 'names' ? 'nameResult' : `${type}Result`);
-        target.textContent = result;
-        target.parentElement.style.animation = 'none';
-        setTimeout(() => target.parentElement.classList.add('fade-in'), 10);
-
-        this.addToHistory(type, result);
-    }
-
-    generateCPF() {
-        const n = Array(9).fill(0).map(() => Math.floor(Math.random() * 10));
-        let d1 = 0, d2 = 0;
-        
-        for(let i = 0; i < 9; i++) {
-            d1 += n[8-i] * (10-i);
-            d2 += n[8-i] * (11-i);
-        }
-        
-        d1 = (d1 * 10) % 11;
-        d2 = ((d2 + d1 * 2) * 10) % 11;
-        
-        n.push(d1 > 9 ? 0 : d1);
-        n.push(d2 > 9 ? 0 : d2);
-        
-        return n.reduce((acc, digit, i) => {
-            if(i === 3 || i === 6) acc += '.';
-            else if(i === 9) acc += '-';
-            acc += digit;
-            return acc;
-        }, '');
-    }
-
-    generatePassword() {
-        const length = parseInt(document.getElementById('pwdLength').value);
-        const useUpper = document.getElementById('pwdUpper').checked;
-        const useLower = document.getElementById('pwdLower').checked;
-        const useNumbers = document.getElementById('pwdNumbers').checked;
-        const useSymbols = document.getElementById('pwdSymbols').checked;
-
-        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const lower = 'abcdefghijklmnopqrstuvwxyz';
-        const numbers = '0123456789';
-        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-
-        let charset = '';
-        const required = [];
-
-        if(useUpper) { charset += upper; required.push(upper[Math.floor(Math.random() * upper.length)]); }
-        if(useLower) { charset += lower; required.push(lower[Math.floor(Math.random() * lower.length)]); }
-        if(useNumbers) { charset += numbers; required.push(numbers[Math.floor(Math.random() * numbers.length)]); }
-        if(useSymbols) { charset += symbols; required.push(symbols[Math.floor(Math.random() * symbols.length)]); }
-
-        // Ensure minimum 4 of each required type
-        for(let type of ['upper', 'lower', 'numbers', 'symbols']) {
-            if((type === 'upper' && useUpper) || (type === 'lower' && useLower) || 
-               (type === 'numbers' && useNumbers) || (type === 'symbols' && useSymbols)) {
-                for(let i = 0; i < 4; i++) {
-                    required.push(this.getRandomChar(type));
-                }
-            }
-        }
-
-        // Leetspeak transformation
-        const leetMap = {'a':'4','e':'3','i':'1','o':'0','s':'5','t':'7'};
-        let password = required.sort(() => Math.random() - 0.5).join('') + 
-                      Array.from({length: length - required.length}, () => 
-                          charset[Math.floor(Math.random() * charset.length)]);
-
-        // Apply leetspeak to some characters
-        password = password.split('').map(char => {
-            if(Math.random() < 0.3 && leetMap[char.toLowerCase()]) {
-                return leetMap[char.toLowerCase()];
-            }
-            return char;
-        }).join('');
-
-        // Double shuffle for extra entropy
-        for(let i = 0; i < 2; i++) {
-            password = password.split('').sort(() => Math.random() - 0.5).join('');
-        }
-
-        this.updatePasswordStrength(length);
-        return password.slice(0, length);
-    }
-
-    getRandomChar(type) {
-        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const lower = 'abcdefghijklmnopqrstuvwxyz';
-        const numbers = '0123456789';
-        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-        
-        switch(type) {
-            case 'upper': return upper[Math.floor(Math.random() * upper.length)];
-            case 'lower': return lower[Math.floor(Math.random() * lower.length)];
-            case 'numbers': return numbers[Math.floor(Math.random() * numbers.length)];
-            case 'symbols': return symbols[Math.floor(Math.random() * symbols.length)];
-        }
-    }
-
-    generateName() {
-        const ptNames = {
-            male: ['João', 'Pedro', 'Lucas', 'Mateus', 'Gabriel', 'Rafael', 'Guilherme', 'Samuel', 'Henrique', 'Eduardo'],
-            female: ['Maria', 'Ana', 'Julia', 'Beatriz', 'Laura', 'Sofia', 'Manu', 'Clara', 'Luiza', 'Cecilia'],
-            surnames: ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes']
-        };
-        
-        const enNames = {
-            male: ['James', 'Robert', 'John', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Charles'],
-            female: ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'],
-            surnames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
+        const userMessage = {
+            text: message,
+            sender: 'user',
+            timestamp: new Date()
         };
 
-        const isPt = document.getElementById('nameLang').checked;
-        const names = isPt ? ptNames : enNames;
-        const gender = Math.random() > 0.5 ? 'male' : 'female';
-        
-        const first = names[gender][Math.floor(Math.random() * names[gender].length)];
-        const last = names.surnames[Math.floor(Math.random() * names.surnames.length)];
-        
-        return `${first} ${last}`;
-    }
+        // Add user message
+        await this.addMessage(userMessage);
+        input.value = '';
+        this.adjustInputHeight();
 
-    generateNickname() {
-        const prefixes = ['xX', 'Pro', 'Neo', 'Dark', 'Ghost', 'Shadow', 'Fire', 'Ice', 'Ninja', 'Elite'];
-        const suffixes = ['Killer', 'Master', 'Pro', 'God', 'King', 'Queen', 'Boss', 'Legend', 'Hero', 'Ninja'];
-        const gamerWords = ['PvP', 'NoobSlayer', 'Headshot', 'Rage', 'Clutch', 'Carry', 'GG', 'WP', 'EZ'];
+        // Show typing indicator
+        this.showTypingIndicator();
 
-        const style = Math.floor(Math.random() * 3);
-        let nick = '';
-
-        switch(style) {
-            case 0: // xX_Nick_Xx
-                nick = `${prefixes[Math.floor(Math.random()*prefixes.length)]}_${this.randomWord()}_${suffixes[Math.floor(Math.random()*suffixes.length)]}`;
-                break;
-            case 1: // ProNick123
-                nick = `Pro${this.randomWord()}${Math.floor(Math.random()*9999)}`;
-                break;
-            case 2: // NickPvP
-                nick = `${this.randomWord()}${gamerWords[Math.floor(Math.random()*gamerWords.length)]}`;
-                break;
-        }
-
-        return nick;
-    }
-
-    randomWord() {
-        const words = 'a b c d e f g h i j k l m n o p q r s t u v w x y z'.split(' ');
-        return words[Math.floor(Math.random()*words.length)].toUpperCase() + 
-               words[Math.floor(Math.random()*words.length)].toUpperCase();
-    }
-
-    updatePasswordStrength(length = document.getElementById('pwdLength').value) {
-        const fill = document.getElementById('strengthFill');
-        const text = document.getElementById('strengthText');
-        
-        const strength = Math.min(100, (length / 128) * 100);
-        fill.style.width = strength + '%';
-        
-        if(strength >= 95) {
-            text.textContent = '🔒 NIST Level 4+ (Ultra Forte)';
-            text.className = 'text-success';
-        } else if(strength >= 80) {
-            text.textContent = '🛡️ NIST Level 3 (Muito Forte)';
-            text.className = 'text-success';
+        try {
+            // Get AI response
+            const aiResponse = await this.callAI(message);
+            const aiMessage = {
+                text: aiResponse,
+                sender: 'ai',
+                timestamp: new Date()
+            };
+            
+            await this.addMessage(aiMessage);
+        } catch (error) {
+            console.error('AI Error:', error);
+            const errorMessage = {
+                text: 'Desculpe, ocorreu um erro ao gerar a resposta. Verifique sua API Key.',
+                sender: 'ai',
+                timestamp: new Date(),
+                error: true
+            };
+            await this.addMessage(errorMessage);
+        } finally {
+            this.hideTypingIndicator();
         }
     }
 
-    copyToClipboard(targetId) {
-        const text = document.getElementById(targetId).textContent;
-        navigator.clipboard.writeText(text).then(() => {
-            this.showToast();
+    async addMessage(message) {
+        if (!this.currentChatId) return;
+
+        const docRef = await addDoc(collection(window.firebase.db, `chats/${this.currentChatId}/messages`), message);
+        
+        // Update chat title based on first message
+        if (this.messages.length === 0 && message.sender === 'user') {
+            await updateDoc(doc(window.firebase.db, 'chats', this.currentChatId), {
+                title: message.text.slice(0, 50) + '...'
+            });
+        }
+
+        // Update chat last message
+        await updateDoc(doc(window.firebase.db, 'chats', this.currentChatId), {
+            updatedAt: new Date(),
+            lastMessage: message.text.slice(0, 50) + (message.text.length > 50 ? '...' : '')
         });
     }
 
-    showToast() {
-        const toast = new bootstrap.Toast(document.getElementById('copyToast'));
-        toast.show();
+    async callAI(message) {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama3-8b-8192', // Groq free model
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Você é LS AI, um assistente inteligente, útil e conciso. Responda sempre em português brasileiro.'
+                    },
+                    {
+                        role: 'user',
+                        content: message
+                    }
+                ],
+                max_tokens: 1000,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
     }
 
-    addToHistory(type, value) {
-        const timestamp = new Date().toLocaleString('pt-BR');
-        const item = { type, value: value.slice(0, 50) + (value.length > 50 ? '...' : ''), timestamp };
-        
-        this.history.unshift(item);
-        this.history = this.history.slice(0, 50); // Keep last 50
-        
-        localStorage.setItem('neoForgeHistory', JSON.stringify(this.history));
-        this.loadHistory();
-    }
+    renderMessages() {
+        const container = document.getElementById('messagesContainer');
+        if (this.messages.length === 0) {
+            container.innerHTML = `
+                <div class="welcome-message text-center py-5">
+                    <i class="bi bi-chat-dots display-1 text-muted mb-3"></i>
+                    <h4 class="text-muted mb-2">Pronto para conversar</h4>
+                    <p class="text-muted mb-0">Envie uma mensagem para começar</p>
+                </div>
+            `;
+            return;
+        }
 
-    loadHistory() {
-        const list = document.getElementById('historyList');
-        const mobileList = document.getElementById('mobileHistoryList');
-        
-        list.innerHTML = this.history.map(item => `
-            <div class="history-item ${item.type} fade-in" onclick="neoForge.copyToClipboard('${item.type}Result')">
-                <div class="d-flex justify-content-between">
-                    <span>${item.value}</span>
-                    <small class="opacity-75">${item.timestamp}</small>
+        container.innerHTML = this.messages.map(msg => `
+            <div class="message ${msg.sender} fade-in">
+                <div class="message-bubble">
+                    ${msg.text}
+                    <div class="message-time">${this.formatTime(msg.timestamp)}</div>
                 </div>
             </div>
         `).join('');
-        
-        mobileList.innerHTML = list.innerHTML;
     }
 
-    clearHistory() {
-        this.history = [];
-        localStorage.removeItem('neoForgeHistory');
-        this.loadHistory();
+    showTypingIndicator() {
+        const container = document.getElementById('typingIndicator');
+        container.style.display = 'flex';
+        this.scrollToBottom();
+    }
+
+    hideTypingIndicator() {
+        document.getElementById('typingIndicator').style.display = 'none';
+    }
+
+    scrollToBottom() {
+        const container = document.getElementById('messagesContainer');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    updateChatTitle(title) {
+        document.getElementById('chatTitle').textContent = title;
+    }
+
+    adjustInputHeight() {
+        const textarea = document.getElementById('messageInput');
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    saveApiKey() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        if (apiKey) {
+            this.apiKey = apiKey;
+            localStorage.setItem('lsai_api_key', apiKey);
+            this.showToast('API Key salva com sucesso!', 'success');
+            document.getElementById('apiKeyInput').value = '';
+        } else {
+            this.showToast('Digite uma API Key válida', 'warning');
+        }
+    }
+
+    loadApiKey() {
+        if (this.apiKey) {
+            document.getElementById('apiKeyInput').value = this.apiKey;
+        }
     }
 
     toggleTheme() {
         document.body.classList.toggle('theme-light');
-        this.theme = document.body.classList.contains('theme-light') ? 'light' : 'dark';
-        localStorage.setItem('neoForgeTheme', this.theme);
+        const isDark = !document.body.classList.contains('theme-light');
+        localStorage.setItem('lsai_theme', isDark ? 'dark' : 'light');
         
-        const icon = document.getElementById('themeToggle').querySelector('i');
-        icon.className = this.theme === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+        const icon = document.querySelector('#themeToggle i');
+        icon.className = isDark ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
     }
 
-    applyTheme() {
-        if(this.theme === 'light') {
+    loadTheme() {
+        const theme = localStorage.getItem('lsai_theme') || 'dark';
+        if (theme === 'light') {
             document.body.classList.add('theme-light');
-            document.getElementById('themeToggle').querySelector('i').className = 'bi bi-sun-fill';
+            document.querySelector('#themeToggle i').className = 'bi bi-sun-fill';
         }
+    }
+
+    toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('show');
+    }
+
+    async logout() {
+        await signOut(window.firebase.auth);
+    }
+
+    async renameChat(chatId) {
+        const newTitle = prompt('Novo nome do chat:');
+        if (newTitle) {
+            await updateDoc(doc(window.firebase.db, 'chats', chatId), {
+                title: newTitle
+            });
+        }
+    }
+
+    async deleteChat(chatId) {
+        if (confirm('Deletar este chat?')) {
+            await deleteDoc(doc(window.firebase.db, 'chats', chatId));
+            if (this.currentChatId === chatId) {
+                this.currentChatId = null;
+                this.renderMessages();
+            }
+        }
+    }
+
+    formatTime(date) {
+        return new Date(date.toDate ? date.toDate() : date).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.getElementById('mainToast');
+        document.getElementById('toastTitle').textContent = type === 'success' ? 'Sucesso' : 
+            type === 'warning' ? 'Aviso' : 'Info';
+        document.getElementById('toastBody').textContent = message;
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
     }
 }
 
-// Initialize app
-const neoForge = new NeoForgeAI();
+// Global instance
+const lsai = new LSAI();
+
+// Auto-resize textarea
+document.getElementById('messageInput').addEventListener('input', function() {
+    lsai.adjustInputHeight();
+});
